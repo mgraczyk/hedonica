@@ -10,7 +10,7 @@ pub struct Stats {
     var: Variance,
 }
 impl Stats {
-    pub fn new() -> Stats {
+    fn new() -> Stats {
         Stats {
             min: Min::default(),
             max: Max::default(),
@@ -18,25 +18,25 @@ impl Stats {
         }
     }
 
-    pub fn add(&mut self, x: f64) {
+    fn add(&mut self, x: f64) {
         self.min.add(x);
         self.max.add(x);
         self.var.add(x);
     }
 
-    pub fn min(&self) -> f64 {
+    fn min(&self) -> f64 {
         self.min.min()
     }
 
-    pub fn max(&self) -> f64 {
+    fn max(&self) -> f64 {
         self.max.max()
     }
 
-    pub fn mean(&self) -> f64 {
+    fn mean(&self) -> f64 {
         self.var.mean()
     }
 
-    pub fn var(&self) -> f64 {
+    fn var(&self) -> f64 {
         self.var.population_variance()
     }
 }
