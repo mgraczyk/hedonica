@@ -14,8 +14,11 @@ impl PlayerStrategy for PlayerNoTrades {
         None
     }
 
-    fn maybe_accept_trades(&mut self, trades: HashMap<PlayerId, Trade>) -> Vec<Trade> {
-        return vec![];
+    fn accept_trades_as_lead(&mut self, _trades: HashMap<PlayerId, Trade>) -> Vec<Trade> {
+        vec![]
+    }
+    fn accept_trades_as_non_lead(&mut self, _trade: Trade) -> Option<Trade> {
+        None
     }
 }
 

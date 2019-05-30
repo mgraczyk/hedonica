@@ -12,8 +12,7 @@ pub struct Good {
 
 #[derive(Serialize, Deserialize)]
 pub struct Trade {
-    pub proposor: i32,
-    pub acceptor: i32,
+    pub proposer: PlayerId,
+    pub accepter: PlayerId,
     pub from_proposor: GoodsSet,
-    pub to_acceptor: GoodsSet,
 }

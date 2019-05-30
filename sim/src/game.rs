@@ -110,12 +110,32 @@ impl GameState {
         self.lead = (self.lead + 1) % self.players.len();
         self.current_turn += 1;
         self.current_round = 0;
-        self.current_trade_proposals = HashMap::new();
+        assert_eq!(self.current_trade_proposals.len(), 0);
         self.past_trades
             .push(std::mem::replace(&mut self.current_trades, Vec::new()));
     }
 
-    fn end_round(&mut self) {
+    fn end_round(&mut self, accepted_trades: Vec<Trade>) {
+        // Move goods for accepted trades.
+        accepted_trades.iter().for_each(|trade| {
+            trade.from_proposor.iter().for_each(|(category, amount)| {
+                if *amount > 0.0 {
+                    assert!(self.players[trade.proposer].num_goods[category] > *amount);
+                } else {
+                    assert!(self.players[trade.accepter].num_goods[category] > -*amount);
+                }
+                *self.players[trade.proposer]
+                    .num_goods
+                    .get_mut(category)
+                    .unwrap() -= *amount;
+                *self.players[trade.accepter]
+                    .num_goods
+                    .get_mut(category)
+                    .unwrap() += *amount;
+            });
+        });
+        self.current_trades.extend(accepted_trades);
+
         self.current_round += 1;
         self.current_trade_proposals = HashMap::new();
     }
@@ -292,11 +312,11 @@ pub fn generate_start_state(config: &SimConfig, rules: &GameRules) -> GameState 
 pub fn play(
     mut game: GameState,
     rules: &GameRules,
-    players: &mut Vec<Box<player::PlayerStrategy>>,
+    players: &mut Vec<Box<dyn player::PlayerStrategy>>,
 ) -> GameResult {
     'turns: while game.current_turn < rules.max_turns {
         game.start_lead_turn();
-        'trades: loop {
+        'rounds: loop {
             if game.lead_player_state().score() >= rules.victory_threshold {
                 break 'turns;
             }
@@ -304,44 +324,36 @@ pub fn play(
             game.current_trade_proposals = if game.current_round % 2 == 0 {
                 players[game.lead].propose_trades_as_lead()
             } else {
-                let mut trades: HashMap<PlayerId, Trade>;
-
-                for player_id in 0..players.len() {
+                let mut trades = HashMap::new();
+                for (player_id, player) in players.iter_mut().enumerate() {
                     if player_id == game.lead {
                         continue;
                     }
-                    match players[player_id].propose_trade_as_non_lead() {
-                        Some(trade) => trades.insert(player_id, trade),
-                    };
+                    if let Some(trade) = player.propose_trade_as_non_lead() {
+                        trades.insert(player_id, trade);
+                    }
                 }
                 trades
             };
 
             if game.current_round % 2 == 0 && game.current_trade_proposals.len() == 0 {
-                break 'trades;
+                break 'rounds;
             }
 
-            game.current_trades.extend(if game.current_round % 2 == 0 {
-                game.current_trade_proposals
-                    .iter()
-                    .map(|(player_id, trade)| {
-                        let mut trades = HashMap::new();
-                        trades.insert(game.lead, trade);
-                        let player_trades = players[*player_id].maybe_accept_trades(trades);
-                        if player_trades.len() > 0 {
-                            Some(player_trades[0])
-                        } else {
-                            None
-                        }
-                    })
+            let accepted_trades = if game.current_round % 2 == 0 {
+                std::mem::replace(&mut game.current_trade_proposals, HashMap::new())
+                    .into_iter()
+                    .map(|(player_id, trade)| players[player_id].accept_trades_as_non_lead(trade))
                     .filter(|maybe| maybe.is_some())
                     .map(|maybe| maybe.unwrap())
                     .collect()
             } else {
-                players[game.lead].maybe_accept_trades(game.current_trade_proposals)
-            });
-
-            game.end_round();
+                players[game.lead].accept_trades_as_lead(std::mem::replace(
+                    &mut game.current_trade_proposals,
+                    HashMap::new(),
+                ))
+            };
+            game.end_round(accepted_trades);
         }
         game.end_lead_turn();
     }

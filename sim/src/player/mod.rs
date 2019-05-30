@@ -32,7 +32,9 @@ pub trait PlayerStrategy {
 
     fn propose_trades_as_lead(&mut self) -> HashMap<PlayerId, Trade>;
     fn propose_trade_as_non_lead(&mut self) -> Option<Trade>;
-    fn maybe_accept_trades(&mut self, trades: HashMap<PlayerId, Trade>) -> Vec<Trade>;
+
+    fn accept_trades_as_lead(&mut self, trades: HashMap<PlayerId, Trade>) -> Vec<Trade>;
+    fn accept_trades_as_non_lead(&mut self, trade: Trade) -> Option<Trade>;
 }
 
 pub fn register_strategy(player_type: &str, constructor: StrategyConstructor) {
