@@ -5,12 +5,12 @@ pub type Preferences = HashMap<String, f64>;
 pub type GoodsSet = HashMap<String, f64>;
 pub type PlayerId = usize;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Good {
     pub category: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Trade {
     pub proposer: PlayerId,
     pub accepter: PlayerId,

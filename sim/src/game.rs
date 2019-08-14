@@ -57,8 +57,9 @@ use crate::types::*;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::{thread, time};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct PlayerState {
     preferences: Preferences,
     num_goods: GoodsSet,
@@ -73,7 +74,7 @@ impl PlayerState {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct GameState {
     deck: Vec<Good>,
 
@@ -91,7 +92,29 @@ pub struct GameState {
     current_trade_proposals: HashMap<PlayerId, Trade>,
 
     current_trades: Vec<Trade>,
-    past_trades: Vec<Vec<Trade>>,
+    past_trades: HashMap<i32, Vec<Trade>>,
+}
+
+
+fn diff_vector<T>(before: Vec<T>, after: Vec<T>) {
+    for i in 0..min(before.len(), after.len()) {
+    }
+    if (before
+}
+
+fn diff_game_state(before: &GameState, after: &GameState) -> HashMap<String, String> {
+    let mut result = HashMap::new();
+    let insert_if = |k, v| {
+        if v { result.insert(k, v) };
+    }
+
+    insert_if("diff", diff_vector(before.deck, after.deck));
+
+
+    return result
+    if before
+    result.insert(
+
 }
 
 impl GameState {
@@ -108,11 +131,16 @@ impl GameState {
 
     fn end_lead_turn(&mut self) {
         self.lead = (self.lead + 1) % self.players.len();
+        assert_eq!(self.current_trade_proposals.len(), 0);
+        if self.current_trades.len() > 0 {
+            self.past_trades.insert(
+                self.current_turn,
+                std::mem::replace(&mut self.current_trades, Vec::new()),
+            );
+        }
+
         self.current_turn += 1;
         self.current_round = 0;
-        assert_eq!(self.current_trade_proposals.len(), 0);
-        self.past_trades
-            .push(std::mem::replace(&mut self.current_trades, Vec::new()));
     }
 
     fn end_round(&mut self, accepted_trades: Vec<Trade>) {
@@ -305,7 +333,7 @@ pub fn generate_start_state(config: &SimConfig, rules: &GameRules) -> GameState 
         current_round: 0,
         current_trade_proposals: HashMap::new(),
         current_trades: Vec::new(),
-        past_trades: Vec::new(),
+        past_trades: HashMap::new(),
     }
 }
 
@@ -317,6 +345,11 @@ pub fn play(
     'turns: while game.current_turn < rules.max_turns {
         game.start_lead_turn();
         'rounds: loop {
+            thread::sleep(time::Duration::from_millis(500));
+            println!(
+                "game state -> {}",
+                serde_json::to_string_pretty(&game).unwrap()
+            );
             if game.lead_player_state().score() >= rules.victory_threshold {
                 break 'turns;
             }
